@@ -1,0 +1,619 @@
+---
+title: "The Diabetes Analysis"
+output: html_document
+date: "2023-11-08"
+---
+Researcher: Tanatorn Tilkanont\n
+Student Number: 6536068\n
+Analysed Since: 11 November 2023\n
+University: Master of Science in Biomedical and Health Informatics, Faculty of Tropical Medicine, Mahidol University, Thailand
+
+# 1. Introduction
+
+Diabetes mellitus, a chronic metabolic disorder, is characterized by elevated blood glucose levels resulting from defects in insulin secretion, insulin action, or both. It poses a substantial global health burden, with its prevalence steadily rising. Understanding the importance of diabetes mellitus extends beyond its immediate health implications. It is a significant risk factor for various complications, including cardiovascular diseases, kidney disease, and vision loss. While there is no cure for diabetes, strategies like losing weight, eating healthily, being active, and receiving medical treatments can mitigate the harms of this disease in many patients. Early diagnosis can lead to lifestyle changes and more effective treatment,
+the findings may contribute to the broader efforts aimed at reducing the burden of diabetes and improving public health outcomes.
+
+### Objective of Research
+
+In light of the increasing prevalence and associated health risks, this research aims to contribute to the early detection of diabetes mellitus. The primary objectives are twofold:
+
+1. **Identification of Factors for Early Detection:** Investigate and identify key factors that could serve as early indicators of diabetes mellitus. This is to use for prediction of whether individual has diabetes.
+
+2. **Association Between Important Factors:** Examine the associations between the identified factors. Understanding how these factors interact can provide insights into the complex dynamics of diabetes development.
+
+### Dataset Description
+This is a dataset of 253,680 survey responses to the CDC's BRFSS2015. The target variable Diabetes_012 has 3 classes. 0 is for no diabetes or only during pregnancy, 1 is for prediabetes, and 2 is for diabetes. There is class imbalance in this dataset. This dataset has 21 feature variables which composed of
+
+HighBP: 0 = no high BP 1 = high BP
+HighChol: 0 = no high cholesterol 1 = high cholesterol
+CholCheck: 0 = no cholesterol check in 5 years 1 = yes cholesterol check in 5 years
+BMI: Body Mass Index
+Smoker: Have you smoked at least 100 cigarettes in your entire life? [Note: 5 packs = 100 cigarettes] 0 = no 1 = yes
+Stroke: (Ever told) you had a stroke. 0 = no 1 = yes
+HeartDiseaseorAttack: coronary heart disease (CHD) or myocardial infarction (MI) 0 = no 1 = yes
+PhysActivity: physical activity in past 30 days - not including job 0 = no 1 = yes
+Fruits: Consume Fruit 1 or more times per day 0 = no 1 = yes
+Veggies: Consume Vegetables 1 or more times per day 0 = no 1 = yes
+HvyAlcoholConsump: Heavy drinkers (adult men having more than 14 drinks per week and adult women having more than 7 drinks per week) 0 = no
+AnyHealthcare: Have any kind of health care coverage, including health insurance, prepaid plans such as HMO, etc. 0 = no 1 = yes
+NoDocbcCost: Was there a time in the past 12 months when you needed to see a doctor but could not because of cost? 0 = no 1 = yes
+GenHlth: Would you say that in general your health is: scale 1-5 1 = excellent 2 = very good 3 = good 4 = fair 5 = poor
+MentHlth: Now thinking about your mental health, which includes stress, depression, and problems with emotions, for how many days during the past 30 days was your mental health not good?
+PhysHlth: Now thinking about your physical health, which includes physical illness and injury, for how many days during the past 30 days was your physical health not good?
+DiffWalk: Do you have serious difficulty walking or climbing stairs? 0 = no 1 = yes
+Sex: 0 = female 1 = male
+Age: 13-level age category (_AGEG5YR see codebook) 1 = 18-24 9 = 60-64 13 = 80 or older
+Education: Education level (EDUCA see codebook) scale 1-6 1 = Never attended school or only kindergarten 2 = Grades 1 through 8
+Income: Income scale (INCOME2 see codebook) scale 1-8 1 = less than $10,000 5 = less than $35,000 8 = $75,000 or more
+
+Source of dataset: https://www.kaggle.com/datasets/alexteboul/diabetes-health-indicators-dataset/data
+
+### Research Questions:
+1. What are the key demographic, lifestyle, and clinical factors that could potentially serve as early indicators of diabetes mellitus?
+2. What are the insights gained from the associations between the identified factors contribute understanding the development of diabetes mellitus?
+
+### Import the dataset and Validate data type
+Import the data and inspect a few first rows of all the variables.
+```{r}
+# Import the dataset in R from csv format
+df = read.csv("diabetes_012_health_indicators_BRFSS2015.csv")
+
+# View the first 6 rows of dataframe using head()function
+head(df)
+
+# Print Dataframe Structures to Validate Data Types
+print(str(df))
+```
+From the above data structure, data have 253680 rows and 22 columns, which ("HighBP", "HighChol", "CholCheck", "Smoker", "Stroke", "HeartDiseaseorAttack", "PhysActivity", "Fruits", "Veggies", "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost", "DiffWalk", and "Sex") are binary values, "Diabetes_012", "GenHlth", "Age", "Education", "Income") are categorical values, and ("BMI", "MentHlth", "PhysHlth") are continuous values. From the data structure, it is evident that the dataset is diverse, containing binary, categorical, and continuous variables.
+
+### Check the balance of targeted data
+```{r}
+# Print the sizes of non-diabetic, prediabetic, and diabetic groups
+cat("Size of non-diabetic = ", dim(df[df$Diabetes_012 == 0, ])[1], "\n")
+cat("Size of prediabetic = ", dim(df[df$Diabetes_012 == 1, ])[1], "\n")
+cat("Size of diabetic = ", dim(df[df$Diabetes_012 == 2, ])[1], "\n")
+```
+
+The provided R code first prints the sizes of non-diabetic, prediabetic, and diabetic groups in the dataset. Given the imbalanced nature of the dataset, where the non-diabetic group is larger, there might be challenges in building a robust predictive model. Therefore, this imbalance will be addressed during the data pre-processing.
+
+# Diabetes Analysis Action Plan
+
+## I. Data Preprocessing
+
+### 1. Target Variable Definition
+- Define the dependent variable
+- Combine prediabetes and diabetes values in one class.
+- Manage the imbalance of two-class variables
+
+### 2. Data Transformation
+- Convert binary and categorical columns into factors to ensure consistency and enable appropriate analysis.
+
+### 3. Handling Continuous Variables
+- Assess the necessity for binning in the following continuous variables:
+  - BMI
+  - Mental Health Score (MentHlth)
+  - Physical Health Score (PhysHlth)
+- Decision-making process:
+  - Visualize distribution curves to understand the data distribution.
+  - Conduct the statistical analytic test to determine normality.
+  - If the p-value exceeds 0.05, indicating a normal distribution, refrain from binning.
+
+## II. Modeling
+
+### 4. Feature Selection
+- Identify relevant independent variables by examining their correlation with the dependent variable.
+- Employ backward stepwise feature selection to ensure a parsimonious model.
+- Utilize a significance threshold of p-value < 0.05 for both categorical variables (e.g., using chi-squared tests) and continuous variables (e.g., R-squared).
+
+### 5. Decision Tree Modeling
+- Evaluate the presence of missing values in the selected independent variables and take appropriate action, such as data imputation or row removal.
+- Establish a random seed for reproducibility.
+- Divide the dataset into training and testing subsets (split ratio 80:20).
+- Define the hyperparameters for the Decision Tree model.
+- Fine-tune the hyperparameters
+- Train the Decision Tree model with the refined hyperparameters.
+
+### 6. Model Evaluation
+- Evaluate the model's performance using multiple metrics, including:
+  - Accuracy
+  - F1-score
+  - Precision
+  - Recall
+  - Confusion Matrix
+  - Receiver Operating Characteristic (ROC) analysis
+  - Area Under the ROC Curve (AUC-ROC)
+  - Feature Importance analysis to discern the predictors' contributions.
+
+## III. Features Analysis
+
+### 7. Features Selection
+- Select a limited number of the most important features based on prior decision tree analysis
+
+### 8. Data Pre-Processing
+- Prepare the data for association rule analysis by:
+  - Employing one-hot encoding transformation (binarization).
+  - Transforming the dataset into transactions.
+
+### 9. Association Rules Among Independent Variables
+- Define parameters such as `conf`, `minlen`, `maxlen`, and `support` to identify informative rules. This step may require iteration to determine optimal values.
+- Evaluate if the evidence supports the discovered rules and draw meaningful insights.
+
+## IV. Summary
+- Summarize the key findings, model performance, and implications derived from the entire data science project, including the features analysis.
+
+----------------------------------------------------------------------------------------------------------
+
+# I. Data Preprocessing
+
+### 1. Target Variable Definition
+- Define the dependent variable
+- Combine prediabetes and diabetes values in one class.
+- Manage the imbalance of two-class variables
+
+```{r}
+## Define dependent or target variable
+library(dplyr)
+# Create a new dataset which combine prediabetes(1) and diabetes(2) in "Diabetes_012" variable
+relabeled_data <- df %>% mutate(Diabetes_012 = ifelse(Diabetes_012 == 2, 1, Diabetes_012))
+
+# Rename column "Diabetes_012" to "Diabetes_01" in filtered_data
+relabeled_data <- relabeled_data %>% rename(Diabetes_01 = Diabetes_012)
+
+# Check the filtered dataset
+head(relabeled_data)
+
+# Check unique values in "Diabetes_01" column
+unique_values <- unique(relabeled_data$Diabetes_01)
+
+# Print the unique values
+print(unique_values)
+```
+The `dplyr` library to prepare a dataset for diabetes prediction. It combines prediabetes (1) and diabetes (2) into a single category labeled "Diabetes_01." The code then checks and confirms the successful relabeling through data exploration, displaying the modified dataset and printing unique values in the target variable. This preprocessing step is fundamental for streamlining subsequent analyses or machine learning tasks focused on predicting the presence or absence of diabetes.
+
+```{r}
+# Check dependent variables size
+cat("Size of non-diabetic = ", dim(relabeled_data[relabeled_data$Diabetes_01 == 0, ])[1], "\n")
+cat("Size of diabetic = ", dim(relabeled_data[relabeled_data$Diabetes_01 == 1, ])[1], "\n")
+cat(dim(relabeled_data[relabeled_data$Diabetes_01 == 1, ])[1] / dim(relabeled_data[relabeled_data$Diabetes_01 == 0, ])[1] * 100, " % non-diabetes/diabetes")
+```
+The output indicates that there are 213,703 non-diabetic cases and 39,977 diabetic cases. The last line computes and displays the percentage of non-diabetic to diabetic cases, which is approximately 18.71%. This information is crucial for understanding the imbalance in the dataset, a factor that researchers often need to address for reliable model training and evaluation in predictive analytics.
+
+In order to rectify the class imbalance, particularly in instances where the preponderant class is labeled as class 0, a down-sampling approach is employed. The objective is to achieve a balanced distribution in the classification task within the R programming environment.
+```{r}
+#Balanced target variable by downsampling only the class 0
+
+# Set the seed for reproducible random sampling
+set.seed(123)
+
+# Separate the data into two classes
+nondiabetes <- relabeled_data[relabeled_data$Diabetes_01 == 0, ]
+diabetes <- relabeled_data[relabeled_data$Diabetes_01 == 1, ]
+
+# Downsample the majority class (Non-diabetes, Class 0)
+downsampled_nondiabetes <- nondiabetes[sample(nrow(nondiabetes), size = floor(0.187 * nrow(nondiabetes))), ]
+
+# Combine the downsampled majority class and the minority class
+balanced_data <- rbind(downsampled_nondiabetes, diabetes)
+
+# Shuffle the rows to ensure randomness
+balanced_data <- balanced_data[sample(nrow(balanced_data)), ]
+
+# Check the new class distribution
+table(balanced_data$Diabetes_01)
+
+```
+The process involves random sampling, combination with the minority class (class 1, diabetes), and shuffling of rows to create a balanced dataset named balanced_data. The resulting distribution shows approximately equal instances for both classes: 39,962 for class 0 and 39,977 for class 1.
+
+```{r}
+# Recheck structure of the Dataframe
+str(balanced_data)
+```
+### 2. Handling Continuous Variables
+- Assess the necessity for binning in the following continuous variables:
+  - BMI
+  - Mental Health Score (MentHlth)
+  - Physical Health Score (PhysHlth)
+
+- Decision-making process:
+  - Visualize distribution curves to understand the data distribution.
+```{r}
+## To see how the continuous data is distributed.
+#Load ggplot2 libraries for plotting distribution
+#install.packages("ggplot2")
+library(ggplot2)
+
+# Create histograms for the continuous variables
+ggplot(balanced_data, aes(x = BMI)) +
+  geom_histogram(binwidth = 1, fill = "lightblue", color = "black") +
+  labs(title = "Distribution of BMI", x = "BMI")
+
+ggplot(balanced_data, aes(x = MentHlth)) +
+  geom_histogram(binwidth = 1, fill = "darkgreen", color = "black") +
+  labs(title = "Distribution of MentHlth", x = "Mental Health Score")
+
+ggplot(balanced_data, aes(x = PhysHlth)) +
+  geom_histogram(binwidth = 1, fill = "lightcoral", color = "black") +
+  labs(title = "Distribution of PhysHlth", x = "Physical Health Score")
+```
+An exploration of continuous variables (BMI, MentHlth, PhysHlth) in the balanced dataset reveals consistently right-skewed distributions, indicating a prevalence of lower BMI values and higher mental and physical health scores. To assess normality, the Kolmogorov-Smirnov test will be applied to evaluate the conformity of these distributions with a normal distribution.
+```{r}
+# Set variables for normality testing
+variables <- c("BMI", "MentHlth", "PhysHlth")
+
+# Initialize an empty list to store the test results
+normality_test_results <- list()
+
+# Loop through the variables and perform the Kolmogorov-Smirnov test
+for (var in variables) {
+  # Perform the Kolmogorov-Smirnov test for the variable
+  ks_test_result <- ks.test(balanced_data[[var]], "pnorm")
+  
+  # Store the test result in the list
+  normality_test_results[[var]] <- ks_test_result
+}
+
+# Print the results
+for (var in variables) {
+  cat("Kolmogorov-Smirnov Test for", var, ":\n")
+  print(normality_test_results[[var]])
+  cat("\n")
+}
+```
+The p-values obtained for each test are highly significant (p < 2.2e-16), leading to the rejection of the null hypothesis of normality. This suggests that the observed distributions of these variables deviate significantly from a normal distribution.
+
+Dealing with skewed dataset involves binning continuous data into categorical variables using the "Equal Frequency Binning Method." This approach aims to partition the data into bins, ensuring that each bin encompasses approximately an equal number of data points. The rationale behind this method is its efficacy in handling skewed data distributions, providing a more balanced representation of the underlying patterns within the dataset.
+```{r}
+# Define the number of bins and labels for each variable
+num_bins <- 3
+labels <- c("1", "2", "3")
+
+# Convert 'BMI' into a categorical variable
+balanced_data$BMI_cat <- cut(balanced_data$BMI, breaks = num_bins, labels = labels)
+
+
+# Convert 'MentHlth' into a categorical variable
+balanced_data$MentHlth_cat <- cut(balanced_data$MentHlth, breaks = num_bins, labels = labels)
+
+
+# Convert 'PhysHlth' into a categorical variable
+balanced_data$PhysHlth_cat <- cut(balanced_data$PhysHlth, breaks = num_bins, labels = labels)
+
+# Check the first few rows and structure of the modified dataset
+head(balanced_data)
+str(balanced_data)
+```
+The variables BMI_cat, MentHlth_cat, and PhysHlth_cat have been transformed into factors with three levels each. Subsequently, the continuous data columns have been removed.
+```{r}
+# Columns to drop
+columns_to_drop <- c("BMI", "MentHlth", "PhysHlth")
+
+# Drop the specified columns
+balanced_data <- balanced_data %>% select(-any_of(columns_to_drop))
+
+# Check the first few rows of the modified dataset
+head(balanced_data)
+```
+
+### 3. Data Transformation
+- Transform binary and categorical columns into factors to ensure uniformity and facilitate suitable analyses, as the factor data type is particularly appropriate for Decision Tree classification.
+```{r}
+# Convert data to factors
+balanced_data <- as.data.frame(lapply(balanced_data, as.factor))
+
+# Check the data types of the columns after conversion
+str(balanced_data)
+```
+
+## II. Modeling
+The modeling approach is driven by established principles: feature selection involves correlation analysis and backward stepwise selection for model efficiency. Decision Tree modeling addresses missing values, ensures reproducibility, splits the dataset, and optimizes hyperparameters. Evaluation metrics such as accuracy, F1-score, and feature importance analysis provide a comprehensive assessment. These steps collectively aim to cultivate a robust and interpretable Decision Tree classification model, adhering to best practices in statistical analysis and machine learning methodologies.
+
+### 4. Feature Selection
+- Identify relevant independent variables by examining their correlation with the dependent variable.
+- Employ backward stepwise feature selection to ensure a parsimonious model.
+- Utilize a significance threshold of p-value < 0.05 for categorical variables (e.g., using chi-squared tests).
+
+Use the chi-squared test to assess the association between each categorical variable and the dependent variable. Variables with a p-value less than the significance threshold may be considered relevant.
+
+```{r}
+# Dependent variable
+dependent_var <- "Diabetes_01"
+
+# Independent Vairables
+independent_var <- colnames(balanced_data)[-which(colnames(balanced_data) == "Diabetes_01")]
+
+# Initialize an empty list to store the test results
+chi_squared_results <- list()
+
+# Loop through the categorical variables and perform the Chi-Squared Test
+for (indp_var in independent_var) {
+  # Create a contingency table
+  contingency_table <- table(balanced_data[[dependent_var]], balanced_data[[indp_var]])
+  
+  # Perform the Chi-Squared Test
+  chi_squared_result <- chisq.test(contingency_table)
+  
+  # Store the test result in the list
+  chi_squared_results[[indp_var]] <- chi_squared_result
+}
+
+# Print the results
+for (indp_var in independent_var) {
+  cat("Chi-Squared Test for", indp_var, ":\n")
+  print(chi_squared_results[[indp_var]])
+  cat("\n")
+}
+
+```
+
+Interpretation:
+Significant p-values (< 2.2e-16) from Pearson's Chi-squared tests indicate strong associations between categorical variables (e.g., HighBP, Smoker, Education) and the response variable. These results validate the relevance of the selected features for the model. Notably, tests on ordinal variables like GenHlth and Age exhibit substantial associations, emphasizing their discriminatory power.
+
+Summary:
+The Chi-Squared Test results reveal that the all categorical variables are significantly associated with the dependent variable (Diabetes_01). Consequently, no columns were excluded from the analysis.
+
+### 5. Decision Tree Modeling
+- Evaluate the presence of missing values in the selected independent variables and take appropriate action, such as data imputation or row removal.
+```{r}
+# Check unique values of each column again
+col_to_check_uniq <- colnames(balanced_data)
+
+# Reassure that there's no missing value
+for (i in 1:length(col_to_check_uniq)) {
+  print("Unique Value of, ")
+  print(col_to_check_uniq[i])
+  print(unique(balanced_data[[col_to_check_uniq[i]]]))
+  print("=========================")
+}
+```
+From the result of uniqueness identification, it can be imply that there is no missing variable as well.
+
+- Establish a random seed for reproducibility.
+- Divide the dataset into training and testing subsets (e.g., 80%/20% split).
+
+```{r}
+#Set a random seed for reproducibility
+set.seed(123)
+
+#Determine the number of rows in data
+total_rows <- nrow(balanced_data)
+
+#Calculate the number of rows for the training and testing sets (80:20)
+training_size <- round(total_rows * 0.8)
+
+#Create a vector of randomly sampled row indices for the training set with training size that recently calculated.
+training_indices <- sample(1:total_rows, size = training_size, replace = FALSE)
+
+#Create the training set
+training_data <- balanced_data[training_indices, ]
+
+#Create the testing set using (-) to exclude the rows used in the training set
+testing_data <- balanced_data[-training_indices, ]
+
+#View the length of each data in training_data and testing_data
+dim(training_data)
+dim(testing_data)
+```
+
+Assure stratification of dependent variables after splitting.
+```{r}
+# Check dependent variables ratio
+training_dependent_ratio <- dim(training_data[training_data$Diabetes_01 == 1, ]) / dim(training_data[training_data$Diabetes_01 == 0, ])
+testing_dependent_ratio <- dim(testing_data[testing_data$Diabetes_01 == 1, ]) / dim(testing_data[testing_data$Diabetes_01 == 0, ])
+
+# Check if 2 subset of data have similar size of dependent variables
+cat(training_dependent_ratio[1] * 100, " % of diabetic/not diabetic in training dataset\n")
+cat(testing_dependent_ratio[1] * 100, " % of diabetic/not diabetic in testing dataset")
+```
+
+#### Hyperparameter search
+- Define the hyperparameters for the Decision Tree model.
+- Fine-tune the hyperparameters using the "caret" package or a suitable optimization method.
+- Train the Decision Tree model with the refined hyperparameters.
+
+```{r}
+# install.packages(c("rpart", "rpart.plot"))
+library(rpart)
+library(rpart.plot)
+#install.packages("caret")
+library(caret)
+```
+Hyperparameters for the Decision Tree model are focusing on the complexity parameter (cp) and utilizing a grid search approach for fine-tuning. Cross-validation with 10 folds ensures robust model evaluation. The decision tree is trained on the specified hyperparameter grid using the train() function from the caret package. The resulting model's performance is visualized and its hyperparameters are printed, providing insights into the optimal configuration for predictive accuracy and parsimony.
+```{r}
+# Define the hyperparameters for the Decision Tree model.
+## Fine-tuning complexity parameter (cp)
+hyper_grid <- expand.grid(cp = seq(0.00005, 0.001, by = 0.00005))
+
+## Cross-validation prep
+ctrl <- trainControl(method = "cv",    # Cross-validation
+                    number = 10,       # Number of folds
+                    verboseIter = TRUE # Display progress
+)
+
+# Train the decision tree model with hyperparameter tuning
+model <- train(Diabetes_01~.,
+               data = training_data,
+               method = "rpart",
+               trControl = ctrl,
+               tuneGrid = hyper_grid,
+               control = rpart.control(cp = 0.00005, maxdepth = 20)
+              
+)
+
+# Print the best model and its hyperparameters
+plot(model)
+print(model)
+```
+The optimal model, selected based on the highest accuracy, attains a significant accuracy of 72.82% and a Kappa value of 0.456. This indicates that the model achieves a noteworthy predictive performance in distinguishing between diabetic and non-diabetic cases, substantiating the effectiveness of the chosen hyperparameter configuration with a complexity parameter of 0.00025.
+```{r}
+# Train the decision tree model with the chosen cp
+final_model <- rpart(Diabetes_01 ~ .,
+                     data = training_data,
+                     method = "class",  # For classification tasks
+                     control = rpart.control(cp = 0.00025, maxdepth = 20))  # Use the chosen cp value
+
+# Print a summary of the final model
+## Since the model summary is very long to be displayed, I decided to not show the summary in report. There will be relevant information about this model later on.
+# summary(final_model)
+```
+
+```{r}
+# Visualize the tree model
+rpart.plot::prp(final_model, extra = 10)
+```
+
+### 6. Model Evaluation
+- Evaluate the model's performance using multiple metrics, including:
+  - Accuracy
+  - F1-score
+  - Precision
+  - Recall
+  - Confusion Matrix
+  - Receiver Operating Characteristic (ROC) analysis
+  - Area Under the ROC Curve (AUC-ROC)
+  - Feature Importance analysis to discern the predictors' contributions.
+```{r}
+# Import Libs
+library(caret)
+library(pROC)  # For ROC analysis
+
+# Make predictions on the test set
+predictions <- predict(final_model, testing_data, type = "class")
+
+# Evaluate performance metrics
+confusion_matrix <- confusionMatrix(predictions, testing_data$Diabetes_01)
+
+# Accuracy
+accuracy <- confusion_matrix$overall["Accuracy"]
+
+# F1-score
+f1_score <- confusion_matrix$byClass["F1"]
+
+# Precision
+precision <- confusion_matrix$byClass["Precision"]
+
+# Recall
+recall <- confusion_matrix$byClass["Recall"]
+
+# ROC analysis
+roc_curve <- roc(testing_data$Diabetes_01, as.numeric(predictions))
+roc_auc <- auc(roc_curve)
+
+# Feature Importance
+feature_importance <- varImp(final_model)
+
+# Confusion Matrix
+print(confusion_matrix)
+
+# Feature Importance
+print(feature_importance)
+```
+```{r}
+# Print the results
+cat("Accuracy:", accuracy, "\n")
+cat("F1-Score:", f1_score, "\n")
+cat("Precision:", precision, "\n")
+cat("Recall:", recall, "\n")
+cat("AUC-ROC:", roc_auc, "\n")
+```
+The model demonstrates commendable performance, achieving an accuracy of 72.45%. The F1-Score, a composite metric of precision and recall, attains a substantial value of 70.84%, indicating robust balance between correctly identifying positive instances and minimizing false positives. Precision, measuring the accuracy of positive predictions, stands at 75.33%, while recall, capturing the model's sensitivity, is noteworthy at 66.86%. The AUC-ROC value of 72.46% further substantiates the model's discriminative ability, validating its efficacy in distinguishing between diabetic and non-diabetic cases.
+
+##### Visualization of Confusion matrix
+```{r}
+# Plot the confusion matrix
+plot(confusion_matrix$table, 
+     col = c("darkgreen", "darkred"),
+     main = "Confusion Matrix",
+     xlab = "Predicted",
+     ylab = "Actual")
+
+# Add row/column labels
+legend("topleft",legend = rownames(confusion_matrix$table), fill = c("darkgreen", "darkred"))
+```
+the model correctly predicted 5,350 instances where the true class was 0 (non-diabetic) and 6,234 instances where the true class was 1 (diabetic). However, it misclassified 2,652 instances of class 1 as class 0, and 1,752 instances of class 0 as class 1.
+
+##### Visualization of ROC
+```{r}
+plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2,
+     xlab = "False Positive Rate", ylab = "True Positive Rate")
+```
+The ROC plot visually represents the trade-off between true positive rate and false positive rate, emphasizing the model's capacity to balance sensitivity and specificity.
+
+## III. Features Analysis
+
+### 7. Feature Selection
+- Select a limited number of the most important features based on Decision Tree model.
+
+```{r}
+# Extract variable importance
+importance_values <- final_model$variable.importance
+
+# Create a data frame for plotting
+importance_df <- data.frame(variable = names(importance_values), importance = importance_values)
+
+# Order the data frame by importance values in descending order
+importance_df <- importance_df[order(importance_df$importance, decreasing = TRUE), ]
+
+# Plot a bar chart
+barplot(importance_df$importance, names.arg = importance_df$variable, col = "skyblue", las = 2, main = "Variable Importance", ylab = "Importance values", cex.names = 0.7)
+
+```
+
+According to the chart, the decision was made to exclusively focus on four variables—High Blood Pressure (HighBP), General Health (GenHlth), High Cholesterol (HighChol), and Age—for the Association Rule analysis. This deliberate selection aims to enhance precision and prioritize variables with significant impact on association patterns within the dataset.
+
+### 8. Data Pre-Processing
+- Prepare the data for association rule analysis by:
+  - Selecting relevant columns for analysis.
+
+```{r}
+# Selecting columns to include in the new data frame
+selected_columns <- c("HighBP", "GenHlth", "HighChol", "Age")
+
+# Creating a new data frame with selected columns
+new_df <- balanced_data[selected_columns]
+
+# Displaying the new data frame
+head(new_df)
+```
+  
+  - Employing one-hot encoding transformation (binarization).
+```{r}
+library(arules)
+library(dplyr)
+
+# Convert the data to a binary matrix (One-hot encoding)
+binary_matrix <- model.matrix(~ 0 + ., data = new_df)
+
+# Convert the binary matrix to a transactions object
+transactions <- as(binary_matrix, "transactions")
+```
+
+### 9. Association Rules Among Independent Variables
+  - Define parameters such as `minlen`, `maxlen`, and `support` to identify informative rules. This step may require iteration to determine optimal values.
+
+```{r}
+# Association Rule Mining using function apriori()
+# Set minimum support to 1% and minimum confidence to 50% to see total rules
+dm_rule <- apriori(transactions, parameter = list(sup = 0.01, conf = 0.5, target="rules", minlen=2))
+```
+With low minimum support 1% and minimum confidence 50% , 123 rules identified. To narrow the rules, by increase minimum support to 10% and remain minimum confidence of 50%
+```{r}
+dm_rule2 <- apriori(transactions, parameter = list(sup = 0.1, conf = 0.5, target="rules", minlen=2))
+```
+
+With the increasing minimum support 10%, 10 rules identified. To narrow the rules, by increasing the minimum confidence to 65%
+```{r}
+dm_rule3 <- apriori(transactions, parameter = list(sup = 0.1, conf = 0.65, target="rules", minlen=2))
+inspect(dm_rule3)
+```
+With the increasing minimum confidence 65%, 7 rules identified.
+Now, check the result by sorted `lift`
+```{r}
+newdm_rule3 <- sort(dm_rule3, by="lift")
+inspect(newdm_rule3)
+```
+
+The association rule results reveal significant patterns in the dataset. Notably, individuals with a "General Health" severity level of 4 (Fair) are 73.28% likely to have high blood pressure (HighBP). Additionally, the combination of a severity level 3 (Good) in "General Health" and high cholesterol (HighChol) indicates a 72.47% likelihood of high blood pressure. High cholesterol alone is associated with a 70.39% chance of high blood pressure, while the reverse association holds with a 66.35% likelihood. Further, when both high blood pressure and a severity level 3 (Good) in "General Health" are present, the likelihood of high cholesterol is 66.20%. Other associations, such as age category 10 (Age 65 - 69 years old) predicting high blood pressure, are also evident. These findings offer valuable insights into potential risk factors and relationships within the dataset.
+
+## IV. Summary
+
+The Diabetes Analysis project followed a comprehensive action plan to explore and model diabetes-related factors. Initially, the target variable was defined by combining prediabetes and diabetes values to address class imbalance. Data preprocessing involved transforming binary and categorical columns into factors for consistency. Continuous variables like BMI, Mental Health Score (MentHlth), and Physical Health Score (PhysHlth) underwent distribution analysis and normality tests. Modeling included feature selection and Decision Tree modeling, resulting in a refined model evaluated through accuracy, F1-score, precision, recall, confusion matrix, and ROC analysis. Feature importance guided the selection of key variables. Features analysis narrowed down influential variables for association rule analysis, preparing the data with one-hot encoding. Association rules were established, revealing significant associations among variables. The project's key findings underscore the impact of General Health severity levels, high cholesterol, and age on high blood pressure. This multifaceted approach integrates statistical rigor, machine learning, and association rule analysis to offer nuanced insights into diabetes-related factors, culminating in a comprehensive summary of findings and model performance.
